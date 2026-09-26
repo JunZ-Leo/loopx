@@ -27,6 +27,9 @@ from loopx.capabilities.material_lifecycle._validation import (
 from loopx.capabilities.periodic_report.core import (
     _reject_raw_keys as reject_report_keys,
 )
+from loopx.control_plane.goals.artifact_lifecycle import (
+    _compact_text as compact_goal_reference,
+)
 from loopx.control_plane.runtime.public_safety import (
     SECRET_LIKE_SURFACE_PATTERN,
     validate_public_safe_value,
@@ -116,6 +119,21 @@ def test_benign_text_still_passes_the_owner() -> None:
         "the operator rotated the deploy credentials yesterday",
     ):
         assert not SECRET_LIKE_SURFACE_PATTERN.search(text), text
+
+
+def test_goal_artifact_projection_keeps_both_owners_and_the_positive_case() -> None:
+    # A GitHub token is invisible to the private-text corpus, so this row fails
+    # the moment this surface stops consulting the credential-shape owner.
+    assert compact_goal_reference("ghp_" + "a" * 36) is None
+    # The bare word is invisible to the shape owner, so this row fails the
+    # moment this surface stops consulting the private-text corpus.
+    assert compact_goal_reference("the Bearer token expired") is None
+    # Positive control: without this row the two assertions above could pass on
+    # a surface that refused every value.
+    assert (
+        compact_goal_reference("weekly digest for goal_42")
+        == "weekly digest for goal_42"
+    )
 
 
 @pytest.mark.parametrize(
